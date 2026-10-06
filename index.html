@@ -27,7 +27,7 @@
             <i class="fa-solid fa-gauge-high text-4xl"></i>
         </div>
         <h1 class="text-xl md:text-3xl font-extrabold text-white tracking-wide mb-2">Bao Tốc Độ & Chỉ Đường Thông Minh</h1>
-        <p class="text-indigo-400 font-semibold text-base mb-4">Phần mềm phát triển bởi Thầy Nguyễn Giang Nam</p>
+        <p class="text-indigo-400 font-semibold text-base mb-4">Phần mềm phát triển bởi Thầy Nguyễn Giang Nam[cite: 1]</p>
         <button onclick="dismissIntro()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-xl transition transform hover:scale-105 flex items-center space-x-2">
             <i class="fa-solid fa-play"></i>
             <span>Bắt Đầu Trải Nghiệm</span>
@@ -139,7 +139,7 @@
         let currentSpeedLimit = 80;
         let watchId = null;
         let soundEnabled = true;
-        let lastLat = 16.8188;
+        let lastLat = 16.8188; // Đông Hà, Quảng Trị
         let lastLng = 107.0934;
         let lastCameraAlertTime = {};
         let lastStreetFetchTime = 0;
@@ -292,10 +292,9 @@
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'vi-VN'; // Ép buộc ngôn ngữ tiếng Việt chuẩn xác
-                utterance.rate = 1.0;     // Tốc độ đọc vừa phải, rõ ràng
+                utterance.lang = 'vi-VN';
+                utterance.rate = 1.0;
                 
-                // Tự động tìm giọng đọc tiếng Việt có sẵn trên thiết bị (Android/Windows/iOS)
                 const voices = window.speechSynthesis.getVoices();
                 const vnVoice = voices.find(v => v.lang === 'vi-VN' || v.lang.toLowerCase().includes('vi'));
                 if (vnVoice) {
