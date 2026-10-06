@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bao Tốc Độ - Cảnh Báo Tốc Độ & Chỉ Đường Thông Minh</title>
+    <title>Báo Tốc Độ - Cảnh Báo Tốc Độ & Chỉ Đường Thông Minh</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -53,7 +53,7 @@
         <!-- 2. Thanh Tên Địa Chỉ Vị Trí Thực Tế -->
         <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md border border-slate-300 text-slate-800 px-6 py-2.5 rounded-2xl shadow-2xl flex items-center space-x-2 max-w-[90%] text-center">
             <i class="fa-solid fa-location-dot text-red-500"></i>
-            <span id="current-street-name" class="font-bold text-xs md:text-sm tracking-wide">Đông Hà, Quảng Trị</span>
+            <span id="current-street-name" class="font-bold text-xs md:text-sm tracking-wide">Đang kết nối GPS thực tế...</span>
         </div>
 
         <!-- 3. Nút Menu & Tìm Kiếm Nổi -->
@@ -66,7 +66,7 @@
             </button>
         </div>
 
-        <!-- Bản đồ Chuẩn / Vệ tinh toggle -->
+        <!-- Bản đồ Giao thông / Vệ tinh toggle -->
         <div class="absolute top-4 right-4 z-20 flex space-x-1.5 p-1.5 rounded-xl border border-slate-300 shadow-xl bg-white">
             <button onclick="setMapLayer('standard')" id="layer-btn-standard" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition">Giao Thông</button>
             <button onclick="setMapLayer('satellite')" id="layer-btn-satellite" class="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold transition">Vệ Tinh</button>
@@ -139,16 +139,25 @@
         let currentSpeedLimit = 50; 
         let watchId = null;
         let soundEnabled = true;
-        let lastLat = 16.8188; // Đông Hà, Quảng Trị
-        let lastLng = 107.0934;
+        let currentLat = null;
+        let currentLng = null;
         let lastCameraAlertTime = {};
+        let lastDangerAlertTime = {};
         let lastStreetFetchTime = 0;
         let lastSpokenPlace = "";
+        let isMapInitialized = false;
 
+        // Danh sách camera phạt nguội
         const speedCameras = [
             { lat: 16.8192, lng: 107.0983, limit: 60, desc: 'Camera Phạt Nguội Quốc Lộ 1A' },
             { lat: 16.8250, lng: 107.1100, limit: 50, desc: 'Điểm kiểm tra tốc độ khu vực trung tâm' },
             { lat: 16.8100, lng: 107.0800, limit: 80, desc: 'Bắn tốc độ đoạn tránh TP' }
+        ];
+
+        // Danh sách điểm đen tai nạn và khúc cua nguy hiểm
+        const dangerZones = [
+            { lat: 16.8300, lng: 107.1000, desc: 'Điểm đen tai nạn giao thông khu vực nút giao' },
+            { lat: 16.8400, lng: 107.1200, desc: 'Khúc cua nguy hiểm, tầm nhìn hạn chế' }
         ];
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -161,33 +170,47 @@
             const intro = document.getElementById('intro-screen');
             if (intro) {
                 intro.classList.add('opacity-0');
-                setTimeout(() => { intro.style.display = 'none'; initMap(); }, 700);
-            } else { initMap(); }
+                setTimeout(() => { 
+                    intro.style.display = 'none'; 
+                    startRealtimeGPS(); 
+                }, 700);
+            } else { 
+                startRealtimeGPS(); 
+            }
         }
 
-        function toggleMenuDrawer() {
-            document.getElementById('menu-drawer').classList.toggle('-translate-x-full');
+        function startRealtimeGPS() {
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const { latitude, longitude } = position.coords;
+                        currentLat = latitude;
+                        currentLng = longitude;
+                        initMap(latitude, longitude);
+                        initGeolocationTracking();
+                    },
+                    error => {
+                        alert("Không thể lấy vị trí GPS từ thiết bị. Vui lòng cấp quyền GPS và bật định vị trên trình duyệt.");
+                        initMap(16.0472, 108.2062); 
+                        initGeolocationTracking();
+                    },
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                );
+            } else {
+                alert("Trình duyệt của bạn không hỗ trợ định vị GPS.");
+            }
         }
 
-        function openSearchModal() {
-            toggleMenuDrawer();
-        }
-
-        function closeAddressModal() {
-            document.getElementById('address-modal').classList.add('hidden');
-        }
-
-        function initMap() {
+        function initMap(lat, lng) {
             if (map) return;
-            map = L.map('map', { zoomControl: false }).setView([lastLat, lastLng], 16);
+            map = L.map('map', { zoomControl: false }).setView([lat, lng], 17);
             setMapLayer('standard');
             renderCamerasOnMap();
-            
-            updateUserPositionOnMap(lastLat, lastLng);
-            updateStreetAndLandmarks(lastLat, lastLng);
-
-            initGeolocation();
+            renderDangerZonesOnMap();
+            updateUserPositionOnMap(lat, lng);
+            updateStreetAndLandmarks(lat, lng);
             setTimeout(() => { map.invalidateSize(); }, 300);
+            isMapInitialized = true;
         }
 
         function setMapLayer(type) {
@@ -197,7 +220,6 @@
             const btnSat = document.getElementById('layer-btn-satellite');
 
             if (type === 'satellite') {
-                // Chế độ Vệ tinh kết hợp nhãn giao thông bên trên giống Google Maps Hybrid
                 const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                     maxZoom: 19, attribution: 'Tiles &copy; Esri'
                 });
@@ -209,7 +231,6 @@
                 btnSat.className = "bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition";
                 btnStd.className = "bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold transition";
             } else {
-                // Chế độ Giao thông chuẩn sáng sủa, chi tiết đầy đủ đường sá
                 currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19, attribution: '&copy; OpenStreetMap'
                 }).addTo(map);
@@ -229,16 +250,34 @@
             });
         }
 
-        function initGeolocation() {
+        function renderDangerZonesOnMap() {
+            dangerZones.forEach((zone) => {
+                const dangerIcon = L.divIcon({
+                    className: 'custom-danger-icon',
+                    html: `<div style="background-color: #eab308; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: black; font-size: 10px; font-weight: bold; border: 2px solid white;"><i class="fa-solid fa-triangle-exclamation"></i></div>`,
+                    iconSize: [22, 22], iconAnchor: [11, 11]
+                });
+                L.marker([zone.lat, zone.lng], { icon: dangerIcon }).addTo(map).bindPopup(`<b>Chú ý!</b><br>${zone.desc}`);
+            });
+        }
+
+        function initGeolocationTracking() {
             if ('geolocation' in navigator) {
                 watchId = navigator.geolocation.watchPosition(
                     position => {
                         const { latitude, longitude, speed } = position.coords;
-                        lastLat = latitude; lastLng = longitude;
+                        currentLat = latitude; 
+                        currentLng = longitude;
+                        
                         let calculatedSpeed = (speed !== null && !isNaN(speed)) ? Math.round(speed * 3.6) : 0;
                         updateSpeedUI(calculatedSpeed);
-                        updateUserPositionOnMap(latitude, longitude);
-                        if (map) map.setView([latitude, longitude], map.getZoom());
+                        
+                        if (isMapInitialized) {
+                            updateUserPositionOnMap(latitude, longitude);
+                            map.setView([latitude, longitude], map.getZoom());
+                        } else {
+                            initMap(latitude, longitude);
+                        }
                         
                         let now = Date.now();
                         if (now - lastStreetFetchTime > 5000) {
@@ -247,11 +286,12 @@
                         }
 
                         checkNearbyCameras(latitude, longitude);
+                        checkDangerZones(latitude, longitude);
                     },
                     error => { 
-                        console.warn("GPS warning, using default location.");
+                        console.warn("GPS tracking error: ", error.message);
                     },
-                    { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+                    { enableHighAccuracy: true, maximumAge: 500, timeout: 10000 }
                 );
             }
         }
@@ -262,7 +302,7 @@
                 .then(data => {
                     if (data && data.address) {
                         let addr = data.address;
-                        let road = addr.road || addr.pedestrian || addr.suburb || "Đông Hà";
+                        let road = addr.road || addr.pedestrian || addr.suburb || "Đang di chuyển";
                         let amenity = addr.amenity || addr.bridge || addr.waterway || addr.natural || addr.highway || "";
                         
                         let displayTxt = road;
@@ -283,11 +323,13 @@
             if (!userMarker) {
                 const userIcon = L.divIcon({
                     className: 'user-pos-icon',
-                    html: `<div style="background-color: #2563eb; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px rgba(37, 99, 235, 0.9);"></div>`,
-                    iconSize: [20, 20], iconAnchor: [10, 10]
+                    html: `<div style="background-color: #2563eb; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 14px rgba(37, 99, 235, 0.9);"></div>`,
+                    iconSize: [22, 22], iconAnchor: [11, 11]
                 });
                 userMarker = L.marker(latLng, { icon: userIcon }).addTo(map);
-            } else { userMarker.setLatLng(latLng); }
+            } else { 
+                userMarker.setLatLng(latLng); 
+            }
         }
 
         function updateSpeedUI(speed) {
@@ -297,7 +339,9 @@
                 card.classList.add('pulse-danger');
                 playWarningBeep();
                 speakText(`Cảnh báo quá tốc độ! Tốc độ hiện tại là ${speed} ki lô mét trên giờ.`);
-            } else { card.classList.remove('pulse-danger'); }
+            } else { 
+                card.classList.remove('pulse-danger'); 
+            }
         }
 
         function setSpeedLimit(limit) {
@@ -311,6 +355,14 @@
             if (activeBtn) {
                 activeBtn.className = "speed-limit-btn bg-indigo-600 text-white py-2 rounded font-bold transition shadow";
             }
+        }
+
+        function toggleMenuDrawer() {
+            document.getElementById('menu-drawer').classList.toggle('-translate-x-full');
+        }
+
+        function openSearchModal() {
+            toggleMenuDrawer();
         }
 
         function speakText(text) {
@@ -359,15 +411,34 @@
             });
         }
 
+        function checkDangerZones(lat, lng) {
+            dangerZones.forEach((zone, index) => {
+                const R = 6371;
+                const dLat = (zone.lat - lat) * (Math.PI / 180);
+                const dLon = (zone.lng - lng) * (Math.PI / 180);
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat * (Math.PI/180)) * Math.cos(zone.lat * (Math.PI/180)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+                const distMeters = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 1000;
+                
+                if (distMeters <= 500) {
+                    const now = Date.now();
+                    if (!lastDangerAlertTime[index] || (now - lastDangerAlertTime[index] > 120000)) {
+                        speakText(`Chú ý! Phía trước có ${zone.desc}, vui lòng giảm tốc độ.`);
+                        lastDangerAlertTime[index] = now;
+                    }
+                }
+            });
+        }
+
         function calculateRoute() {
             const destQuery = document.getElementById('dest-input').value.trim();
             if (!destQuery) { alert('Vui lòng nhập điểm đến.'); return; }
+            let startCoord = currentLat ? [currentLat, currentLng] : [16.8188, 107.0934];
             let fullQuery = destQuery.toLowerCase().includes('việt nam') ? destQuery : destQuery + ', Việt Nam';
             fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(fullQuery)}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.length > 0) {
-                        drawRoute([lastLat, lastLng], [parseFloat(data[0].lat), parseFloat(data[0].lon)], data[0].display_name);
+                        drawRoute(startCoord, [parseFloat(data[0].lat), parseFloat(data[0].lon)], data[0].display_name);
                     } else { alert('Không tìm thấy địa điểm.'); }
                 }).catch(() => { alert('Lỗi kết nối.'); });
         }
