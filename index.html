@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bao Tốc Độ - Cảnh Báo Tốc Độ & Chỉ Đường Thông Minh</title>
+    <title>Báo Tốc Độ - Cảnh báo tốc độ p</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -50,10 +50,10 @@
             </div>
         </div>
 
-        <!-- 2. Thanh Tên Địa Chỉ Vị Trí Thực Tế (Cấu trúc 2 cấp: Xã/Phường - Tỉnh/Thành phố) -->
+        <!-- 2. Thanh Tên Địa Chỉ Vị Trí Thực Tế (Cấu trúc 2 cấp) -->
         <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md border border-slate-300 text-slate-800 px-6 py-2.5 rounded-2xl shadow-2xl flex items-center space-x-2 max-w-[90%] text-center">
             <i class="fa-solid fa-location-dot text-red-500"></i>
-            <span id="current-street-name" class="font-bold text-xs md:text-sm tracking-wide">Đang cập nhật tọa độ bản đồ số 2 cấp...</span>
+            <span id="current-street-name" class="font-bold text-xs md:text-sm tracking-wide">Đang cập nhật tọa độ bản đồ số...</span>
         </div>
 
         <!-- 3. Nút Menu & Tìm Kiếm Nổi -->
@@ -161,7 +161,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             const intro = document.getElementById('intro-screen');
             if (intro) intro.style.display = 'flex';
-            setTimeout(() => { speakText("Chào mừng bạn đến với hệ thống bản đồ số và cảnh báo tốc độ hành chính 2 cấp."); }, 1000);
+            setTimeout(() => { speakText("Chào mừng bạn đến với hệ thống bản đồ số hành chính 2 cấp."); }, 1000);
         });
 
         function dismissIntro() {
@@ -218,6 +218,7 @@
             const btnSat = document.getElementById('layer-btn-satellite');
 
             if (type === 'satellite') {
+                // Bản đồ vệ tinh số nền tảng kết hợp nhãn giao thông hành chính 2 cấp mới nhất
                 const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                     maxZoom: 19, attribution: 'Tiles &copy; Esri'
                 });
@@ -301,12 +302,10 @@
                     if (data && data.address) {
                         let addr = data.address;
                         let road = addr.road || addr.pedestrian || "";
-                        // Mô hình hành chính 2 cấp: Cấp cơ sở (Phường/Xã/Thị trấn) và Cấp tỉnh (Tỉnh/Thành phố trực thuộc Trung ương)
                         let wardOrCommune = addr.ward || addr.quarter || addr.suburb || addr.village || "";
                         let provinceOrCity = addr.city || addr.state || addr.province || "";
                         let amenity = addr.amenity || addr.bridge || addr.waterway || addr.natural || addr.highway || "";
                         
-                        // Ghép chuỗi theo tiêu chuẩn địa giới 2 cấp
                         let administrativeParts = [wardOrCommune, provinceOrCity].filter(Boolean).join(', ');
                         let displayTxt = road ? `${road} (${administrativeParts})` : administrativeParts;
                         if (amenity) displayTxt = `${amenity} - ${displayTxt}`;
