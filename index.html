@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Báo Tốc Độ - Cảnh Báo Tốc Độ & Chỉ Đường Thông Minh</title>
+    <title>Bao Tốc Độ - Cảnh Báo Tốc Độ & Chỉ Đường Thông Minh</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -26,8 +26,8 @@
         <div class="bg-indigo-600 text-white p-5 rounded-3xl shadow-2xl mb-6 animate-bounce">
             <i class="fa-solid fa-gauge-high text-4xl"></i>
         </div>
-        <h1 class="text-xl md:text-3xl font-extrabold text-white tracking-wide mb-2">Bao Tốc Độ & Chỉ Đường Thông Minh</h1>
-        <p class="text-indigo-400 font-semibold text-base mb-4">Phần mềm phát triển bởi Thầy Nguyễn Giang Nam</p>
+        <h1 class="text-xl md:text-3xl font-extrabold text-white tracking-wide mb-2">Bao Tốc Độ & Bản Đồ Số 2 Cấp</h1>
+        <p class="text-indigo-400 font-semibold text-base mb-4">Hệ thống giám sát giao thông trực tuyến</p>
         <button onclick="dismissIntro()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-xl transition transform hover:scale-105 flex items-center space-x-2">
             <i class="fa-solid fa-play"></i>
             <span>Bắt Đầu Trải Nghiệm</span>
@@ -50,10 +50,10 @@
             </div>
         </div>
 
-        <!-- 2. Thanh Tên Địa Chỉ Vị Trí Thực Tế -->
+        <!-- 2. Thanh Tên Địa Chỉ Vị Trí Thực Tế (Cấu trúc 2 cấp: Xã/Phường - Tỉnh/Thành phố) -->
         <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md border border-slate-300 text-slate-800 px-6 py-2.5 rounded-2xl shadow-2xl flex items-center space-x-2 max-w-[90%] text-center">
             <i class="fa-solid fa-location-dot text-red-500"></i>
-            <span id="current-street-name" class="font-bold text-xs md:text-sm tracking-wide">Đang kết nối GPS thực tế...</span>
+            <span id="current-street-name" class="font-bold text-xs md:text-sm tracking-wide">Đang cập nhật tọa độ bản đồ số 2 cấp...</span>
         </div>
 
         <!-- 3. Nút Menu & Tìm Kiếm Nổi -->
@@ -147,14 +147,12 @@
         let lastSpokenPlace = "";
         let isMapInitialized = false;
 
-        // Danh sách camera phạt nguội
         const speedCameras = [
             { lat: 16.8192, lng: 107.0983, limit: 60, desc: 'Camera Phạt Nguội Quốc Lộ 1A' },
             { lat: 16.8250, lng: 107.1100, limit: 50, desc: 'Điểm kiểm tra tốc độ khu vực trung tâm' },
             { lat: 16.8100, lng: 107.0800, limit: 80, desc: 'Bắn tốc độ đoạn tránh TP' }
         ];
 
-        // Danh sách điểm đen tai nạn và khúc cua nguy hiểm
         const dangerZones = [
             { lat: 16.8300, lng: 107.1000, desc: 'Điểm đen tai nạn giao thông khu vực nút giao' },
             { lat: 16.8400, lng: 107.1200, desc: 'Khúc cua nguy hiểm, tầm nhìn hạn chế' }
@@ -163,7 +161,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             const intro = document.getElementById('intro-screen');
             if (intro) intro.style.display = 'flex';
-            setTimeout(() => { speakText("Chào mừng bạn đến với hệ thống báo tốc độ và dẫn đường thông minh."); }, 1000);
+            setTimeout(() => { speakText("Chào mừng bạn đến với hệ thống bản đồ số và cảnh báo tốc độ hành chính 2 cấp."); }, 1000);
         });
 
         function dismissIntro() {
@@ -191,7 +189,7 @@
                     },
                     error => {
                         alert("Không thể lấy vị trí GPS từ thiết bị. Vui lòng cấp quyền GPS và bật định vị trên trình duyệt.");
-                        initMap(16.0472, 108.2062); 
+                        initMap(16.8188, 107.0934); 
                         initGeolocationTracking();
                     },
                     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -302,15 +300,21 @@
                 .then(data => {
                     if (data && data.address) {
                         let addr = data.address;
-                        let road = addr.road || addr.pedestrian || addr.suburb || "Đang di chuyển";
+                        let road = addr.road || addr.pedestrian || "";
+                        // Mô hình hành chính 2 cấp: Cấp cơ sở (Phường/Xã/Thị trấn) và Cấp tỉnh (Tỉnh/Thành phố trực thuộc Trung ương)
+                        let wardOrCommune = addr.ward || addr.quarter || addr.suburb || addr.village || "";
+                        let provinceOrCity = addr.city || addr.state || addr.province || "";
                         let amenity = addr.amenity || addr.bridge || addr.waterway || addr.natural || addr.highway || "";
                         
-                        let displayTxt = road;
-                        if (amenity) displayTxt = `${amenity} - ${road}`;
-                        document.getElementById('current-street-name').innerText = displayTxt;
+                        // Ghép chuỗi theo tiêu chuẩn địa giới 2 cấp
+                        let administrativeParts = [wardOrCommune, provinceOrCity].filter(Boolean).join(', ');
+                        let displayTxt = road ? `${road} (${administrativeParts})` : administrativeParts;
+                        if (amenity) displayTxt = `${amenity} - ${displayTxt}`;
+                        
+                        document.getElementById('current-street-name').innerText = displayTxt || "Đang di chuyển";
 
                         if (displayTxt !== lastSpokenPlace && amenity) {
-                            speakText(`Đang đi qua ${displayTxt}`);
+                            speakText(`Đang đi qua ${amenity}`);
                             lastSpokenPlace = displayTxt;
                         }
                     }
