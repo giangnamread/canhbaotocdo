@@ -205,9 +205,9 @@
                 </button>
             </div>
             <div class="p-4 overflow-y-auto space-y-3 text-slate-300 text-xs leading-relaxed">
-                <p>1. <strong>Tác giả:</strong> Phần mềm báo tốc độ và dẫn đường phát triển bởi <strong>Thầy Nguyễn Giang Nam</strong>.</p>
-                <p>2. <strong>Dẫn đường trực quan:</strong> Nhập điểm đến vào ô tìm kiếm, bản đồ sẽ tự động định vị vị trí đi, đến và vẽ tuyến đường rõ ràng.</p>
-                <p>3. <strong>Cảnh báo giọng nói:</strong> Tự động đọc tên điểm bắn tốc độ/phạt nguội khi xe tiến lại gần dưới 500m.</p>
+                <p>1. <strong>Tác giả:</strong> Phần mềm báo tốc độ và dẫn đường phát triển bởi <strong>Thầy Nguyễn Giang Nam</strong>[cite: 1].</p>
+                <p>2. <strong>Dẫn đường trực quan:</strong> Nhập điểm đến vào ô tìm kiếm, bản đồ sẽ tự động định vị vị trí đi, đến và vẽ tuyến đường rõ ràng[cite: 1].</p>
+                <p>3. <strong>Cảnh báo giọng nói:</strong> Tự động đọc tên điểm bắn tốc độ/phạt nguội khi xe tiến lại gần dưới 500m[cite: 1].</p>
             </div>
             <div class="p-3 bg-slate-800 border-t border-slate-700 text-right">
                 <button onclick="toggleGuideModal()" class="bg-indigo-600 text-white font-medium px-4 py-1.5 rounded-xl text-xs transition shadow">
@@ -320,6 +320,7 @@
             const btnSat = document.getElementById('layer-btn-satellite');
 
             if (type === 'satellite') {
+                // Sử dụng Esri World Imagery qua giao thức https:// bảo mật tuyệt đối trên mọi tên miền
                 currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                     maxZoom: 19,
                     attribution: 'Tiles &copy; Esri'
@@ -525,7 +526,6 @@
             if (!startQuery) {
                 processDestination([fallbackLat, fallbackLng], destQuery, "Vị trí của bạn (GPS)");
             } else {
-                // Sử dụng HTTPS cho Nominatim API
                 fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=vn&q=${encodeURIComponent(startQuery)}`)
                     .then(res => res.json())
                     .then(startData => {
@@ -544,7 +544,6 @@
         }
 
         function processDestination(startCoord, destQuery, startName) {
-            // Sử dụng HTTPS cho Nominatim API
             const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=vn&q=${encodeURIComponent(destQuery)}`;
 
             fetch(searchUrl)
@@ -606,7 +605,6 @@
 
             document.getElementById('route-info-panel').classList.remove('hidden');
 
-            // Sử dụng OSRM qua giao thức HTTPS bảo mật
             const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startCoord[1]},${startCoord[0]};${destCoord[1]},${destCoord[0]}?overview=full&geometries=geojson`;
 
             fetch(osrmUrl)
