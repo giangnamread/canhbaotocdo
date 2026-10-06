@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bao Tốc Độ - Bản Đồ Hành Chính 2 Cấp</title>
+    <title>Bao Tốc Độ - Cảnh Báo Tốc Độ & Chỉ Đường Thông Minh</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -21,13 +21,13 @@
 </head>
 <body class="bg-slate-900 text-slate-100 h-full flex flex-col overflow-hidden">
 
-    <!-- Màn hình giới thiệu ban đầu -->
+    <!-- Màn hình giới thiệu -->
     <div id="intro-screen" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-700">
         <div class="bg-indigo-600 text-white p-5 rounded-3xl shadow-2xl mb-6 animate-bounce">
-            <i class="fa-solid fa-map-location-dot text-4xl"></i>
+            <i class="fa-solid fa-gauge-high text-4xl"></i>
         </div>
-        <h1 class="text-xl md:text-3xl font-extrabold text-white tracking-wide mb-2">Bản Đồ Hành Chính 2 Cấp</h1>
-        <p class="text-indigo-400 font-semibold text-base mb-4">Cảnh báo tốc độ & Định vị phường/xã thời gian thực</p>
+        <h1 class="text-xl md:text-3xl font-extrabold text-white tracking-wide mb-2">Bao Tốc Độ & Bản Đồ Số 2 Cấp</h1>
+        <p class="text-indigo-400 font-semibold text-base mb-4">Hệ thống giám sát giao thông trực tuyến</p>
         <button onclick="dismissIntro()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-xl transition transform hover:scale-105 flex items-center space-x-2">
             <i class="fa-solid fa-play"></i>
             <span>Bắt Đầu Trải Nghiệm</span>
@@ -50,15 +50,10 @@
             </div>
         </div>
 
-        <!-- 2. THANH HIỂN THỊ CHÍNH QUYỀN 2 CẤP (Xã/Phường & Tỉnh/Thành phố) -->
-        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-slate-900/95 border-2 border-indigo-500/80 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 max-w-[92%] backdrop-blur-md">
-            <div class="bg-indigo-600 p-2.5 rounded-xl text-white shadow-inner flex-shrink-0">
-                <i class="fa-solid fa-building-columns text-base"></i>
-            </div>
-            <div class="flex flex-col text-left">
-                <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">Đang ở địa bàn hành chính:</span>
-                <span id="admin-level-display" class="font-extrabold text-xs md:text-sm text-white tracking-wide">Đang xác định cấp Phường/Xã...</span>
-            </div>
+        <!-- 2. Thanh Tên Địa Chỉ Vị Trí Thực Tế (Cấu trúc 2 cấp: Xã/Phường - Tỉnh/Thành phố) -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md border border-slate-300 text-slate-800 px-6 py-2.5 rounded-2xl shadow-2xl flex items-center space-x-2 max-w-[90%] text-center">
+            <i class="fa-solid fa-location-dot text-red-500"></i>
+            <span id="current-street-name" class="font-bold text-xs md:text-sm tracking-wide">Đang cập nhật tọa độ bản đồ số 2 cấp...</span>
         </div>
 
         <!-- 3. Nút Menu & Tìm Kiếm Nổi -->
@@ -71,14 +66,14 @@
             </button>
         </div>
 
-        <!-- Nút chuyển đổi Bản đồ Giao thông / Vệ tinh -->
+        <!-- Bản đồ Giao thông / Vệ tinh toggle -->
         <div class="absolute top-4 right-4 z-20 flex space-x-1.5 p-1.5 rounded-xl border border-slate-300 shadow-xl bg-white">
             <button onclick="setMapLayer('standard')" id="layer-btn-standard" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition">Giao Thông</button>
             <button onclick="setMapLayer('satellite')" id="layer-btn-satellite" class="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold transition">Vệ Tinh</button>
         </div>
     </main>
 
-    <!-- Drawer Menu & Lộ trình -->
+    <!-- Drawer Menu & Tìm kiếm -->
     <div id="menu-drawer" class="fixed inset-y-0 left-0 w-80 bg-slate-900/95 backdrop-blur-xl border-r border-slate-700 z-50 transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
         <div class="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
             <h3 class="font-bold text-white text-sm"><i class="fa-solid fa-route text-indigo-400 mr-2"></i>Tìm Đường & Lộ Trình</h3>
@@ -108,9 +103,21 @@
         </div>
     </div>
 
+    <!-- Modal chọn địa chỉ -->
+    <div id="address-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
+            <div class="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="font-bold text-white text-sm">Chọn địa điểm chính xác</h3>
+                <button onclick="closeAddressModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="address-list-container" class="p-3 overflow-y-auto space-y-2 text-xs"></div>
+        </div>
+    </div>
+
     <!-- Firebase SDK Integration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
         const firebaseConfig = {
             apiKey: "AIzaSyD3_I7RGkE5-JEaWnagXSvrJcyx-ycAi3s",
             authDomain: "giangnam146-5a353.firebaseapp.com",
@@ -123,7 +130,6 @@
         initializeApp(firebaseConfig);
     </script>
 
-    <!-- App Logic -->
     <script>
         let map;
         let currentTileLayer = null;
@@ -131,28 +137,31 @@
         let destMarker = null;
         let routePolyline = null;
         let currentSpeedLimit = 50; 
+        let watchId = null;
         let soundEnabled = true;
         let currentLat = null;
         let currentLng = null;
         let lastCameraAlertTime = {};
         let lastDangerAlertTime = {};
         let lastStreetFetchTime = 0;
-        let lastAnnouncedWard = "";
+        let lastSpokenPlace = "";
         let isMapInitialized = false;
 
         const speedCameras = [
             { lat: 16.8192, lng: 107.0983, limit: 60, desc: 'Camera Phạt Nguội Quốc Lộ 1A' },
-            { lat: 16.8250, lng: 107.1100, limit: 50, desc: 'Điểm kiểm tra tốc độ khu vực trung tâm' }
+            { lat: 16.8250, lng: 107.1100, limit: 50, desc: 'Điểm kiểm tra tốc độ khu vực trung tâm' },
+            { lat: 16.8100, lng: 107.0800, limit: 80, desc: 'Bắn tốc độ đoạn tránh TP' }
         ];
 
         const dangerZones = [
-            { lat: 16.8300, lng: 107.1000, desc: 'Điểm đen tai nạn giao thông khu vực nút giao' }
+            { lat: 16.8300, lng: 107.1000, desc: 'Điểm đen tai nạn giao thông khu vực nút giao' },
+            { lat: 16.8400, lng: 107.1200, desc: 'Khúc cua nguy hiểm, tầm nhìn hạn chế' }
         ];
 
         window.addEventListener('DOMContentLoaded', () => {
             const intro = document.getElementById('intro-screen');
             if (intro) intro.style.display = 'flex';
-            setTimeout(() => { speakText("Hệ thống bản đồ định vị hành chính 2 cấp đã sẵn sàng."); }, 1000);
+            setTimeout(() => { speakText("Chào mừng bạn đến với hệ thống bản đồ số và cảnh báo tốc độ hành chính 2 cấp."); }, 1000);
         });
 
         function dismissIntro() {
@@ -179,7 +188,7 @@
                         initGeolocationTracking();
                     },
                     error => {
-                        // Tọa độ mặc định Quảng Trị nếu từ chối GPS
+                        alert("Không thể lấy vị trí GPS từ thiết bị. Vui lòng cấp quyền GPS và bật định vị trên trình duyệt.");
                         initMap(16.8188, 107.0934); 
                         initGeolocationTracking();
                     },
@@ -197,7 +206,7 @@
             renderCamerasOnMap();
             renderDangerZonesOnMap();
             updateUserPositionOnMap(lat, lng);
-            fetchAdministrativeLevel2(lat, lng);
+            updateStreetAndLandmarks(lat, lng);
             setTimeout(() => { map.invalidateSize(); }, 300);
             isMapInitialized = true;
         }
@@ -252,7 +261,7 @@
 
         function initGeolocationTracking() {
             if ('geolocation' in navigator) {
-                navigator.geolocation.watchPosition(
+                watchId = navigator.geolocation.watchPosition(
                     position => {
                         const { latitude, longitude, speed } = position.coords;
                         currentLat = latitude; 
@@ -269,48 +278,44 @@
                         }
                         
                         let now = Date.now();
-                        // Truy vấn định vị hành chính 2 cấp mỗi 6 giây khi di chuyển
-                        if (now - lastStreetFetchTime > 6000) {
-                            fetchAdministrativeLevel2(latitude, longitude);
+                        if (now - lastStreetFetchTime > 5000) {
+                            updateStreetAndLandmarks(latitude, longitude);
                             lastStreetFetchTime = now;
                         }
 
                         checkNearbyCameras(latitude, longitude);
                         checkDangerZones(latitude, longitude);
                     },
-                    error => { console.warn("GPS tracking error: ", error.message); },
+                    error => { 
+                        console.warn("GPS tracking error: ", error.message);
+                    },
                     { enableHighAccuracy: true, maximumAge: 500, timeout: 10000 }
                 );
             }
         }
 
-        // HÀM QUAN TRỌNG: Truy vấn chi tiết chính quyền 2 cấp (Phường/Xã - Tỉnh/Thành phố)
-        function fetchAdministrativeLevel2(lat, lng) {
+        function updateStreetAndLandmarks(lat, lng) {
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${lat}&lon=${lng}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.address) {
                         let addr = data.address;
-                        let road = addr.road || addr.pedestrian || addr.suburb || "";
-                        
-                        // Lọc chính xác cấp 1 (Xã / Phường / Thị trấn) và cấp 2 (Tỉnh / Thành phố)
-                        let wardOrCommune = addr.ward || addr.quarter || addr.suburb || addr.village || addr.neighbourhood || "";
+                        let road = addr.road || addr.pedestrian || "";
+                        // Mô hình hành chính 2 cấp: Cấp cơ sở (Phường/Xã/Thị trấn) và Cấp tỉnh (Tỉnh/Thành phố trực thuộc Trung ương)
+                        let wardOrCommune = addr.ward || addr.quarter || addr.suburb || addr.village || "";
                         let provinceOrCity = addr.city || addr.state || addr.province || "";
+                        let amenity = addr.amenity || addr.bridge || addr.waterway || addr.natural || addr.highway || "";
                         
-                        // Định dạng chuẩn cấu trúc hành chính 2 cấp hiển thị lên màn hình
-                        let locationString = "";
-                        if (wardOrCommune && provinceOrCity) {
-                            locationString = road ? `${road}, ${wardOrCommune} — ${provinceOrCity}` : `${wardOrCommune}, ${provinceOrCity}`;
-                        } else {
-                            locationString = data.display_name || "Đang cập nhật khu vực...";
-                        }
+                        // Ghép chuỗi theo tiêu chuẩn địa giới 2 cấp
+                        let administrativeParts = [wardOrCommune, provinceOrCity].filter(Boolean).join(', ');
+                        let displayTxt = road ? `${road} (${administrativeParts})` : administrativeParts;
+                        if (amenity) displayTxt = `${amenity} - ${displayTxt}`;
                         
-                        document.getElementById('admin-level-display').innerText = locationString;
+                        document.getElementById('current-street-name').innerText = displayTxt || "Đang di chuyển";
 
-                        // Phát âm thanh thông báo khi bước sang Phường/Xã mới
-                        if (wardOrCommune && wardOrCommune !== lastAnnouncedWard) {
-                            speakText(`Bạn đang ở ${wardOrCommune}, thuộc ${provinceOrCity}`);
-                            lastAnnouncedWard = wardOrCommune;
+                        if (displayTxt !== lastSpokenPlace && amenity) {
+                            speakText(`Đang đi qua ${amenity}`);
+                            lastSpokenPlace = displayTxt;
                         }
                     }
                 })
