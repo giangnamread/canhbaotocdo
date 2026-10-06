@@ -27,7 +27,7 @@
             <i class="fa-solid fa-gauge-high text-4xl"></i>
         </div>
         <h1 class="text-xl md:text-3xl font-extrabold text-white tracking-wide mb-2">Bao Tốc Độ & Chỉ Đường Thông Minh</h1>
-        <p class="text-indigo-400 font-semibold text-base mb-4">Phần mềm phát triển bởi Thầy Nguyễn Giang Nam[cite: 1]</p>
+        <p class="text-indigo-400 font-semibold text-base mb-4">Phần mềm phát triển bởi Thầy Nguyễn Giang Nam</p>
         <button onclick="dismissIntro()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-xl transition transform hover:scale-105 flex items-center space-x-2">
             <i class="fa-solid fa-play"></i>
             <span>Bắt Đầu Trải Nghiệm</span>
@@ -128,7 +128,6 @@
             measurementId: "G-VPGHE5M58L"
         };
         initializeApp(firebaseConfig);
-        console.log("Firebase initialized successfully for Bao Tốc Độ");
     </script>
 
     <script>
@@ -140,7 +139,7 @@
         let currentSpeedLimit = 80;
         let watchId = null;
         let soundEnabled = true;
-        let lastLat = 16.8188; // Nam Đông Hà, Quảng Trị
+        let lastLat = 16.8188;
         let lastLng = 107.0934;
         let lastCameraAlertTime = {};
         let lastStreetFetchTime = 0;
@@ -180,7 +179,7 @@
         function initMap() {
             if (map) return;
             map = L.map('map', { zoomControl: false }).setView([lastLat, lastLng], 16);
-            setMapLayer('satellite'); // Mặc định mở bản đồ vệ tinh
+            setMapLayer('satellite');
             renderCamerasOnMap();
             initGeolocation();
             setTimeout(() => { map.invalidateSize(); }, 300);
@@ -229,7 +228,6 @@
                         updateUserPositionOnMap(latitude, longitude);
                         if (map) map.setView([latitude, longitude], map.getZoom());
                         
-                        // Cập nhật tên địa chỉ theo GPS liên tục (giới hạn cách nhau 5 giây để tối ưu mạng)
                         let now = Date.now();
                         if (now - lastStreetFetchTime > 5000) {
                             updateStreetName(latitude, longitude);
@@ -249,14 +247,13 @@
             }
         }
 
-        // Hàm gọi dịch vụ định vị ngược để lấy tên đường/vị trí chính xác tại tọa độ hiện tại
         function updateStreetName(lat, lng) {
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.display_name) {
                         let parts = data.display_name.split(',');
-                        let shortAddress = parts.slice(0, 3).join(','); // Lấy 3 cấp độ địa danh gần nhất
+                        let shortAddress = parts.slice(0, 3).join(',');
                         document.getElementById('current-street-name').innerText = shortAddress;
                     }
                 })
@@ -289,12 +286,22 @@
             document.getElementById('display-speed-limit').innerText = limit;
         }
 
+        // HÀM TỔNG HỢP GIỌNG NÓI ÉP CỨNG CHUẨN TIẾNG VIỆT (vi-VN)
         function speakText(text) {
             if (!soundEnabled) return;
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'vi-VN';
+                utterance.lang = 'vi-VN'; // Ép buộc ngôn ngữ tiếng Việt chuẩn xác
+                utterance.rate = 1.0;     // Tốc độ đọc vừa phải, rõ ràng
+                
+                // Tự động tìm giọng đọc tiếng Việt có sẵn trên thiết bị (Android/Windows/iOS)
+                const voices = window.speechSynthesis.getVoices();
+                const vnVoice = voices.find(v => v.lang === 'vi-VN' || v.lang.toLowerCase().includes('vi'));
+                if (vnVoice) {
+                    utterance.voice = vnVoice;
+                }
+
                 window.speechSynthesis.speak(utterance);
             }
         }
