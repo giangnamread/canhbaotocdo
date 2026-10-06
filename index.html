@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bao Tốc Độ - Cảnh Báo Tốc Độ & Chỉ Đường Thông Minh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap');
+        body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
+        .font-mono-speed { font-family: 'JetBrains Mono', monospace; }
+        .pulse-danger {
+            animation: pulseDanger 1s infinite;
+        }
+        @keyframes pulseDanger {
+            0%, 100% { background-color: rgba(239, 68, 68, 0.2); border-color: rgb(239, 68, 68); }
+            50% { background-color: rgba(239, 68, 68, 0.6); border-color: rgb(220, 38, 38); }
+        }
+        .leaflet-routing-container { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 h-full flex flex-col overflow-hidden">
+
+    <!-- Màn hình giới thiệu (Splash Screen) -->
+    <div id="intro-screen" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-700">
+        <div class="bg-indigo-600 text-white p-5 rounded-3xl shadow-2xl mb-6 animate-bounce">
+            <i class="fa-solid fa-gauge-high text-4xl"></i>
+        </div>
+        <h1 class="text-xl md:text-3xl font-extrabold text-white tracking-wide mb-2">Bao Tốc Độ & Chỉ Đường Thông Minh</h1>
+        <p class="text-indigo-400 font-semibold text-base mb-4">Phần mềm phát triển bởi Thầy Nguyễn Giang Nam</p>
+        <p class="text-slate-400 text-xs max-w-md mb-6">Hệ thống giám sát tốc độ thực tế, cảnh báo phạt nguội qua giọng nói và dẫn đường chi tiết toàn quốc.</p>
+        <button onclick="dismissIntro()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-xl transition transform hover:scale-105 flex items-center space-x-2">
+            <i class="fa-solid fa-play"></i>
+            <span>Bắt Đầu Trải Nghiệm</span>
+        </button>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-3 py-2.5 flex items-center justify-between shadow-md z-20 shrink-0">
+        <div class="flex items-center space-x-2">
+            <div class="bg-indigo-600 text-white p-1.5 rounded-lg shadow flex items-center justify-center">
+                <i class="fa-solid fa-gauge-high text-base"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-sm md:text-base text-white tracking-wide leading-tight">Bao Tốc Độ</h1>
+                <p class="text-[10px] text-slate-400">Thầy Nguyễn Giang Nam</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-1.5">
+            <button onclick="toggleFullscreen()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 rounded-lg text-xs transition" title="Toàn màn hình">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+            <button onclick="toggleGuideModal()" class="bg-indigo-600/80 hover:bg-indigo-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1">
+                <i class="fa-solid fa-book-open"></i>
+                <span class="hidden sm:inline">HD</span>
+            </button>
+            <button id="btn-sound" onclick="toggleSound()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-1">
+                <i id="sound-icon" class="fa-solid fa-volume-high text-indigo-400"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <main class="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+        
+        <!-- Sidebar Controls -->
+        <div class="w-full md:w-80 bg-slate-800/95 backdrop-blur border-b md:border-b-0 md:border-r border-slate-700 flex flex-col z-10 shadow-xl shrink-0 max-h-[45vh] md:max-h-none overflow-y-auto">
+            <div class="p-3 border-b border-slate-700">
+                <h2 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                    <i class="fa-solid fa-route text-indigo-400 mr-1"></i> Tìm Đường & Lộ Trình
+                </h2>
+                <div class="space-y-2">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400">
+                            <i class="fa-solid fa-circle-dot text-emerald-400 text-[10px]"></i>
+                        </span>
+                        <input type="text" id="start-input" placeholder="Xuất phát (GPS hiện tại)" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400">
+                            <i class="fa-solid fa-location-dot text-red-400 text-[10px]"></i>
+                        </span>
+                        <input type="text" id="dest-input" placeholder="Nhập số nhà, tên đường, địa điểm..." 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div class="flex space-x-1.5">
+                        <button onclick="calculateRoute()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg text-xs shadow transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-directions"></i>
+                            <span>Dẫn Đường</span>
+                        </button>
+                        <button onclick="clearRoute()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs transition" title="Xóa lộ trình">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Route Info Panel -->
+            <div id="route-info-panel" class="p-3 bg-slate-900/60 border-b border-slate-700 hidden text-xs">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-slate-400">Khoảng cách:</span>
+                    <span id="route-distance" class="font-bold text-indigo-400">0 km</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Thời gian:</span>
+                    <span id="route-duration" class="font-bold text-emerald-400">0 phút</span>
+                </div>
+            </div>
+
+            <!-- Speed Limit Selector -->
+            <div class="p-3 space-y-2">
+                <div class="bg-slate-900/80 rounded-xl p-2.5 border border-slate-700">
+                    <label class="block text-[10px] font-semibold text-slate-400 uppercase mb-1.5">Giới Hạn Tốc Độ Tuyến Đường</label>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button onclick="setSpeedLimit(50)" id="limit-btn-50" class="speed-limit-btn bg-slate-800 text-slate-300 py-1 rounded text-xs font-bold border border-slate-700 transition">50</button>
+                        <button onclick="setSpeedLimit(60)" id="limit-btn-60" class="speed-limit-btn bg-slate-800 text-slate-300 py-1 rounded text-xs font-bold border border-slate-700 transition">60</button>
+                        <button onclick="setSpeedLimit(80)" id="limit-btn-80" class="speed-limit-btn bg-indigo-600 text-white py-1 rounded text-xs font-bold border border-indigo-500 transition shadow">80</button>
+                        <button onclick="setSpeedLimit(120)" id="limit-btn-120" class="speed-limit-btn bg-slate-800 text-slate-300 py-1 rounded text-xs font-bold border border-slate-700 transition">120</button>
+                    </div>
+                </div>
+
+                <!-- Radar Points list -->
+                <div class="bg-slate-900/80 rounded-xl p-2.5 border border-slate-700 hidden md:block">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-[10px] font-semibold text-slate-400 uppercase">Điểm Phạt Nguội</span>
+                        <span class="text-[10px] bg-indigo-900 text-indigo-300 px-1.5 py-0.2 rounded-full" id="camera-count">0 điểm</span>
+                    </div>
+                    <div id="radar-list" class="space-y-1.5 max-h-32 overflow-y-auto pr-1 text-[11px]"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="flex-1 relative h-full w-full">
+            <div id="map" class="w-full h-full z-0"></div>
+
+            <!-- Floating Speedometer Card -->
+            <div id="speedometer-card" class="absolute top-3 right-3 bg-slate-800/95 backdrop-blur-md border border-slate-700 rounded-xl shadow-xl p-3 z-20 flex flex-col items-center min-w-[140px] transition-all duration-300">
+                <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Tốc Độ</div>
+                <div class="flex items-baseline space-x-1">
+                    <span id="current-speed" class="font-mono-speed text-4xl md:text-5xl font-extrabold text-white tracking-tighter">0</span>
+                    <span class="text-slate-400 font-bold text-xs">km/h</span>
+                </div>
+                
+                <div class="mt-2 pt-2 border-t border-slate-700 w-full flex justify-between items-center text-[11px]">
+                    <span class="text-slate-400">Giới hạn:</span>
+                    <span id="display-speed-limit" class="font-bold text-indigo-400">80 km/h</span>
+                </div>
+                <div class="mt-1 text-[10px] text-slate-400 flex items-center space-x-1">
+                    <i class="fa-solid fa-satellite-dish text-emerald-400" id="gps-status-icon"></i>
+                    <span id="gps-status-text">GPS đang bật</span>
+                </div>
+            </div>
+
+            <!-- Overspeed Warning Banner -->
+            <div id="warning-banner" class="absolute top-3 left-1/2 -translate-x-1/2 bg-red-600/95 border border-red-500 text-white px-4 py-2 rounded-xl shadow-2xl z-30 hidden items-center space-x-2 backdrop-blur-md animate-bounce max-w-[90%]">
+                <i class="fa-solid fa-triangle-exclamation text-xl text-yellow-300 shrink-0"></i>
+                <div>
+                    <h3 class="font-bold text-xs tracking-wide">CẢNH BÁO QUÁ TỐC ĐỘ!</h3>
+                    <p id="warning-msg" class="text-[10px] text-red-100">Vượt quá giới hạn cho phép.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal chọn địa chỉ -->
+    <div id="address-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
+            <div class="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="font-bold text-white text-sm">Chọn địa điểm chính xác</h3>
+                <button onclick="closeAddressModal()" class="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-700/50 transition">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <div id="address-list-container" class="p-3 overflow-y-auto space-y-2 text-xs"></div>
+        </div>
+    </div>
+
+    <!-- Guide Modal -->
+    <div id="guide-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
+            <div class="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
+                <div class="flex items-center space-x-2 text-indigo-400">
+                    <i class="fa-solid fa-book-open text-base"></i>
+                    <h3 class="font-bold text-white text-sm">Hướng Dẫn Sử Dụng</h3>
+                </div>
+                <button onclick="toggleGuideModal()" class="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-700/50 transition">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto space-y-3 text-slate-300 text-xs leading-relaxed">
+                <p>1. <strong>Tác giả:</strong> Phần mềm báo tốc độ và dẫn đường phát triển bởi <strong>Thầy Nguyễn Giang Nam</strong>.</p>
+                <p>2. <strong>Dẫn đường trực quan:</strong> Nhập điểm đến vào ô tìm kiếm, bản đồ sẽ tự động định vị vị trí đi, đến và vẽ tuyến đường rõ ràng.</p>
+                <p>3. <strong>Cảnh báo giọng nói:</strong> Tự động đọc tên điểm bắn tốc độ/phạt nguội khi xe tiến lại gần dưới 500m.</p>
+            </div>
+            <div class="p-3 bg-slate-800 border-t border-slate-700 text-right">
+                <button onclick="toggleGuideModal()" class="bg-indigo-600 text-white font-medium px-4 py-1.5 rounded-xl text-xs transition shadow">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let userMarker = null;
+        let destMarker = null;
+        let startMarker = null;
+        let routingControl = null;
+        let currentSpeedLimit = 80;
+        let watchId = null;
+        let soundEnabled = true;
+        let lastLat = 16.8188; // Nam Đông Hà, Quảng Trị
+        let lastLng = 107.0934;
+        let lastCameraAlertTime = {};
+
+        const speedCameras = [
+            { lat: 16.8192, lng: 107.0983, limit: 60, desc: 'Camera Phạt Nguội Quốc Lộ 1A' },
+            { lat: 16.8250, lng: 107.1100, limit: 50, desc: 'Điểm kiểm tra tốc độ khu vực trung tâm' },
+            { lat: 16.8100, lng: 107.0800, limit: 80, desc: 'Bắn tốc độ đoạn tránh TP' }
+        ];
+
+        // Đảm bảo hiển thị màn hình giới thiệu ổn định trên mọi thiết bị di động
+        window.addEventListener('DOMContentLoaded', () => {
+            const intro = document.getElementById('intro-screen');
+            if (intro) {
+                intro.style.display = 'flex';
+            }
+            setTimeout(() => {
+                speakText("Chào mừng bạn đến với hệ thống báo tốc độ và dẫn đường thông minh của Thầy Nguyễn Giang Nam.");
+            }, 1000);
+        });
+
+        function dismissIntro() {
+            const intro = document.getElementById('intro-screen');
+            if (intro) {
+                intro.classList.add('opacity-0');
+                setTimeout(() => {
+                    intro.style.display = 'none';
+                    initMap();
+                }, 700);
+            } else {
+                initMap();
+            }
+        }
+
+        function toggleGuideModal() {
+            document.getElementById('guide-modal').classList.toggle('hidden');
+        }
+
+        function closeAddressModal() {
+            document.getElementById('address-modal').classList.add('hidden');
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        function initMap() {
+            if (map) return;
+            map = L.map('map', { zoomControl: false }).setView([lastLat, lastLng], 14);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            renderCamerasOnMap();
+            initGeolocation();
+        }
+
+        function renderCamerasOnMap() {
+            const listEl = document.getElementById('radar-list');
+            if(listEl) listEl.innerHTML = '';
+            document.getElementById('camera-count').innerText = speedCameras.length + ' điểm';
+
+            speedCameras.forEach((cam) => {
+                const customIcon = L.divIcon({
+                    className: 'custom-radar-icon',
+                    html: `<div style="background-color: #ef4444; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"><i class="fa-solid fa-camera"></i></div>`,
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
+                });
+
+                L.marker([cam.lat, cam.lng], { icon: customIcon })
+                    .addTo(map)
+                    .bindPopup(`<b>${cam.desc}</b><br>Giới hạn: ${cam.limit} km/h`);
+
+                if(listEl) {
+                    listEl.innerHTML += `
+                        <div class="bg-slate-800 p-2 rounded border border-slate-700 flex justify-between items-center">
+                            <div>
+                                <p class="font-medium text-slate-200">${cam.desc}</p>
+                            </div>
+                            <span class="bg-red-900/60 text-red-300 px-1.5 py-0.5 rounded font-bold text-[10px]">${cam.limit} km/h</span>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function initGeolocation() {
+            if ('geolocation' in navigator) {
+                watchId = navigator.geolocation.watchPosition(
+                    position => {
+                        const { latitude, longitude, speed, accuracy } = position.coords;
+                        lastLat = latitude;
+                        lastLng = longitude;
+                        document.getElementById('gps-status-icon').className = 'fa-solid fa-satellite-dish text-emerald-400';
+                        document.getElementById('gps-status-text').innerText = `GPS (${Math.round(accuracy)}m)`;
+
+                        let calculatedSpeed = (speed !== null && !isNaN(speed)) ? Math.round(speed * 3.6) : 0;
+                        updateSpeedUI(calculatedSpeed);
+                        updateUserPositionOnMap(latitude, longitude);
+                        checkNearbyCameras(latitude, longitude);
+                    },
+                    error => {
+                        console.warn('GPS error:', error.message);
+                        document.getElementById('gps-status-icon').className = 'fa-solid fa-triangle-exclamation text-amber-400';
+                        document.getElementById('gps-status-text').innerText = 'Dùng tọa độ mặc định';
+                        updateUserPositionOnMap(lastLat, lastLng);
+                    },
+                    { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+                );
+            } else {
+                updateUserPositionOnMap(lastLat, lastLng);
+            }
+        }
+
+        function updateUserPositionOnMap(lat, lng) {
+            const latLng = [lat, lng];
+            if (!userMarker) {
+                const userIcon = L.divIcon({
+                    className: 'user-pos-icon',
+                    html: `<div style="background-color: #6366f1; width: 18px; height: 18px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(99, 102, 241, 0.8);"></div>`,
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                });
+                userMarker = L.marker(latLng, { icon: userIcon }).addTo(map);
+            } else {
+                userMarker.setLatLng(latLng);
+            }
+        }
+
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * (Math.PI / 180);
+            const dLon = (lon2 - lon1) * (Math.PI / 180);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+        }
+
+        function checkNearbyCameras(lat, lng) {
+            speedCameras.forEach((cam, index) => {
+                const distMeters = getDistanceFromLatLonInKm(lat, lng, cam.lat, cam.lng) * 1000;
+                if (distMeters <= 500) {
+                    const now = Date.now();
+                    if (!lastCameraAlertTime[index] || (now - lastCameraAlertTime[index] > 120000)) {
+                        speakText(`Chú ý! Phía trước có ${cam.desc}, giới hạn tốc độ ${cam.limit} ki lô mét trên giờ.`);
+                        lastCameraAlertTime[index] = now;
+                    }
+                }
+            });
+        }
+
+        function speakText(text) {
+            if (!soundEnabled) return;
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'vi-VN';
+                utterance.rate = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function updateSpeedUI(speed) {
+            document.getElementById('current-speed').innerText = speed;
+            const card = document.getElementById('speedometer-card');
+            const banner = document.getElementById('warning-banner');
+
+            if (speed > currentSpeedLimit) {
+                card.classList.add('pulse-danger');
+                banner.classList.remove('hidden');
+                banner.classList.add('flex');
+                document.getElementById('warning-msg').innerText = `Tốc độ (${speed} km/h) vượt giới hạn (${currentSpeedLimit} km/h)!`;
+                
+                playWarningBeep();
+                const now = Date.now();
+                if (!window.lastSpeedAlert || now - window.lastSpeedAlert > 10000) {
+                    speakText(`Cảnh báo quá tốc độ! Tốc độ hiện tại là ${speed} ki lô mét trên giờ.`);
+                    window.lastSpeedAlert = now;
+                }
+            } else {
+                card.classList.remove('pulse-danger');
+                banner.classList.add('hidden');
+                banner.classList.remove('flex');
+            }
+        }
+
+        function setSpeedLimit(limit) {
+            currentSpeedLimit = limit;
+            document.getElementById('display-speed-limit').innerText = limit + ' km/h';
+            document.querySelectorAll('.speed-limit-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500', 'shadow');
+                btn.classList.add('bg-slate-800', 'text-slate-300', 'border-slate-700');
+            });
+            const activeBtn = document.getElementById(`limit-btn-${limit}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-slate-800', 'text-slate-300', 'border-slate-700');
+                activeBtn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500', 'shadow');
+            }
+        }
+
+        let audioCtx = null;
+        function playWarningBeep() {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } catch(e) {}
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-indigo-400';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+            }
+        }
+
+        // Cải tiến xử lý tìm đường: Thêm cơ chế bắt lỗi an toàn và dự phòng OSRM
+        function calculateRoute() {
+            const startQuery = document.getElementById('start-input').value.trim();
+            const destQuery = document.getElementById('dest-input').value.trim();
+            
+            if (!destQuery) {
+                alert('Vui lòng nhập điểm đến.');
+                return;
+            }
+
+            if (!startQuery) {
+                processDestination([lastLat, lastLng], destQuery, "Vị trí của bạn (GPS)");
+            } else {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=vn&q=${encodeURIComponent(startQuery)}`)
+                    .then(res => res.json())
+                    .then(startData => {
+                        let startCoord = [lastLat, lastLng];
+                        let startName = "Vị trí của bạn (GPS)";
+                        if (startData && startData.length > 0) {
+                            startCoord = [parseFloat(startData[0].lat), parseFloat(startData[0].lon)];
+                            startName = startData[0].display_name;
+                        }
+                        processDestination(startCoord, destQuery, startName);
+                    })
+                    .catch(() => {
+                        processDestination([lastLat, lastLng], destQuery, "Vị trí của bạn (GPS)");
+                    });
+            }
+        }
+
+        function processDestination(startCoord, destQuery, startName) {
+            const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=vn&q=${encodeURIComponent(destQuery)}`;
+
+            fetch(searchUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        if (data.length === 1) {
+                            drawRouteAndMarkers(startCoord, startName, [parseFloat(data[0].lat), parseFloat(data[0].lon)], data[0].display_name);
+                        } else {
+                            showAddressChoices(data, startCoord, startName);
+                        }
+                    } else {
+                        alert('Không tìm thấy địa điểm đến. Vui lòng thử lại tên chi tiết hơn.');
+                    }
+                })
+                .catch(() => {
+                    alert('Lỗi kết nối khi tìm đường đi.');
+                });
+        }
+
+        function showAddressChoices(results, startCoord, startName) {
+            const container = document.getElementById('address-list-container');
+            container.innerHTML = '';
+
+            results.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left bg-slate-800 hover:bg-slate-700 p-2.5 rounded-lg border border-slate-700 transition text-xs text-slate-200 flex items-center space-x-2';
+                btn.innerHTML = `<i class="fa-solid fa-location-dot text-red-400 shrink-0"></i><span>${item.display_name}</span>`;
+                btn.onclick = function() {
+                    closeAddressModal();
+                    drawRouteAndMarkers(startCoord, startName, [parseFloat(item.lat), parseFloat(item.lon)], item.display_name);
+                };
+                container.appendChild(btn);
+            });
+
+            document.getElementById('address-modal').classList.remove('hidden');
+        }
+
+        function drawRouteAndMarkers(startCoord, startName, destCoord, destName) {
+            if (routingControl) map.removeControl(routingControl);
+            if (destMarker) map.removeLayer(destMarker);
+            if (startMarker) map.removeLayer(startMarker);
+
+            const startIcon = L.divIcon({
+                className: 'start-pos-icon',
+                html: `<div style="background-color: #10b981; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 8px rgba(16, 185, 129, 0.8); display: flex; align-items: center; justify-content: center; color: white; font-size: 8px;"><i class="fa-solid fa-circle-dot"></i></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            startMarker = L.marker(startCoord, { icon: startIcon }).addTo(map).bindPopup(`<b>Điểm xuất phát:</b><br>${startName}`);
+
+            const destIcon = L.divIcon({
+                className: 'dest-pos-icon',
+                html: `<div style="background-color: #ef4444; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); display: flex; align-items: center; justify-content: center; color: white; font-size: 8px;"><i class="fa-solid fa-flag"></i></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            destMarker = L.marker(destCoord, { icon: destIcon }).addTo(map).bindPopup(`<b>Điểm đến:</b><br>${destName}`).openPopup();
+
+            document.getElementById('route-info-panel').classList.remove('hidden');
+
+            // Sử dụng router dự phòng ổn định hơn để tránh lỗi kết nối OSRM
+            try {
+                routingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(startCoord[0], startCoord[1]),
+                        L.latLng(destCoord[0], destCoord[1])
+                    ],
+                    router: L.Routing.osrmv1({
+                        serviceUrl: 'https://router.project-osrm.org/route/v1'
+                    }),
+                    routeWhileDragging: false,
+                    lineOptions: { styles: [{ color: '#6366f1', opacity: 0.8, weight: 5 }] },
+                    show: false,
+                    addWaypoints: false,
+                    fitSelectedRoutes: true,
+                    createMarker: function() { return null; }
+                }).addTo(map);
+
+                routingControl.on('routesfound', function(e) {
+                    const summary = e.routes[0].summary;
+                    const distanceKm = (summary.totalDistance / 1000).toFixed(1);
+                    const durationMinutes = Math.round(summary.totalTime / 60);
+
+                    document.getElementById('route-distance').innerText = distanceKm + ' km';
+                    document.getElementById('route-duration').innerText = durationMinutes + ' phút';
+                });
+
+                routingControl.on('routingerror', function(e) {
+                    console.warn('Routing error event:', e);
+                    alert('Không thể vẽ tuyến đường tự động do máy chủ định tuyến bận. Vui lòng thử lại sau.');
+                });
+
+            } catch (err) {
+                console.error(err);
+                alert('Lỗi kết nối khi tìm đường đi.');
+            }
+
+            speakText(`Đã tìm thấy lộ trình đi ${destName}.`);
+        }
+
+        function clearRoute() {
+            if (routingControl) {
+                map.removeControl(routingControl);
+                routingControl = null;
+            }
+            if (destMarker) {
+                map.removeLayer(destMarker);
+                destMarker = null;
+            }
+            if (startMarker) {
+                map.removeLayer(startMarker);
+                startMarker = null;
+            }
+            document.getElementById('route-info-panel').classList.add('hidden');
+            document.getElementById('dest-input').value = '';
+            document.getElementById('start-input').value = '';
+        }
+    </script>
+</body>
+</html>
