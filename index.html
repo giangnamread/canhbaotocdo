@@ -206,7 +206,7 @@
             </div>
             <div class="p-4 overflow-y-auto space-y-3 text-slate-300 text-xs leading-relaxed">
                 <p>1. <strong>Tác giả:</strong> Phần mềm báo tốc độ và dẫn đường phát triển bởi <strong>Thầy Nguyễn Giang Nam</strong>[cite: 1].</p>
-                <p>2. <strong>Dẫn đường trực quan:</strong> Nhập số nhà, tên đường, cầu, đèo, địa điểm bất kỳ trên toàn quốc để vẽ lộ trình chuẩn xác[cite: 1].</p>
+                <p>2. <strong>Dẫn đường trực quan:</strong> Nhập số nhà, tên đường, cầu, đèo, núi trên toàn quốc để vẽ lộ trình chính xác[cite: 1].</p>
                 <p>3. <strong>Cảnh báo giọng nói:</strong> Tự động đọc tên điểm bắn tốc độ/phạt nguội khi xe tiến lại gần dưới 500m[cite: 1].</p>
             </div>
             <div class="p-3 bg-slate-800 border-t border-slate-700 text-right">
@@ -510,13 +510,13 @@
             }
         }
 
-        // HỆ THỐNG TÌM KIẾM TOÀN DIỆN (ALL) VỚI CƠ CHẾ BẮT LỖI AN TOÀN
+        // HỆ THỐNG TÌM KIẾM TOÀN QUỐC TỰ ĐỘNG BỔ SUNG QUỐC GIA & BẮT LỖI
         function calculateRoute() {
             const startQuery = document.getElementById('start-input').value.trim();
             const destQuery = document.getElementById('dest-input').value.trim();
             
             if (!destQuery) {
-                alert('Vui lòng nhập điểm đến cần tìm.');
+                alert('Vui lòng nhập điểm đến.');
                 return;
             }
 
@@ -526,7 +526,8 @@
             if (!startQuery) {
                 resolveLocation(destQuery, [fallbackLat, fallbackLng], "Vị trí của bạn (GPS)");
             } else {
-                fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=vn&q=${encodeURIComponent(startQuery)}`)
+                let fullStartQuery = startQuery.toLowerCase().includes('việt nam') ? startQuery : startQuery + ', Việt Nam';
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(fullStartQuery)}`)
                     .then(res => res.json())
                     .then(startData => {
                         let startCoord = [fallbackLat, fallbackLng];
@@ -544,11 +545,12 @@
         }
 
         function resolveLocation(destQuery, startCoord, startName) {
-            const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&countrycodes=vn&q=${encodeURIComponent(destQuery)}`;
+            let fullQuery = destQuery.toLowerCase().includes('việt nam') ? destQuery : destQuery + ', Việt Nam';
+            const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&q=${encodeURIComponent(fullQuery)}`;
 
             fetch(searchUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error('Network response error');
+                    if (!response.ok) throw new Error('Network error');
                     return response.json();
                 })
                 .then(data => {
@@ -559,19 +561,12 @@
                             showAddressChoices(data, startCoord, startName);
                         }
                     } else {
-                        alert('Không tìm thấy địa điểm này. Vui lòng nhập chi tiết hơn.');
+                        alert('Không tìm thấy địa điểm này. Vui lòng nhập chi tiết hơn (Ví dụ: Tên đường, Cầu, Đèo kèm theo Tỉnh/Thành phố).');
                     }
                 })
                 .catch(err => {
-                    console.warn('Search API fallback triggered:', err);
-                    // Fallback xử lý khi chạy trực tiếp file:// hoặc lỗi mạng tạm thời
-                    if (destQuery.toLowerCase().includes('gio linh')) {
-                        drawRouteAndMarkers(startCoord, startName, [16.8442, 107.1183], "Gio Linh, Quảng Trị");
-                    } else if (destQuery.toLowerCase().includes('đông hà') || destQuery.toLowerCase().includes('dong ha')) {
-                        drawRouteAndMarkers(startCoord, startName, [16.8188, 107.0934], "Đông Hà, Quảng Trị");
-                    } else {
-                        alert('Lỗi kết nối khi tìm kiếm. Vui lòng chạy trang web qua Live Server hoặc tên miền HTTPS.');
-                    }
+                    console.error('Search error:', err);
+                    alert('Lỗi kết nối khi tìm kiếm. Vui lòng kiểm tra lại mạng internet.');
                 });
         }
 
