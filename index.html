@@ -3,16 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bảo Tốc Độ & Chỉ Đường Toàn Quốc - Thầy Nguyễn Giang Nam</title>
+    <title>Bảo Tốc Độ & Bản Đồ Số Toàn Quốc - Thầy Nguyễn Giang Nam</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Leaflet Routing Machine -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap');
@@ -24,7 +21,6 @@
             50% { background-color: rgba(239, 68, 68, 0.95); border-color: rgb(220, 38, 38); }
         }
         #map { width: 100%; height: 100%; z-index: 1; }
-        .leaflet-routing-container { display: none !important; }
         .leaflet-popup-content-wrapper { background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 12px; }
         .leaflet-popup-tip { background: #0f172a; }
     </style>
@@ -32,12 +28,14 @@
 <body class="bg-slate-900 text-slate-100 h-full flex flex-col overflow-hidden">
 
     <div id="intro-screen" class="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6 text-center transition-opacity duration-700">
-        <div class="bg-indigo-600 text-white p-6 rounded-3xl shadow-2xl mb-6 animate-bounce">
-            <i class="fa-solid fa-satellite text-5xl"></i>
+        <div class="bg-indigo-600 text-white p-5 rounded-3xl shadow-2xl mb-4 animate-bounce">
+            <i class="fa-solid fa-gauge-high text-5xl"></i>
         </div>
-        <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-wide mb-2">Bảo Tốc Độ & Chỉ Đường Toàn Quốc</h1>
-        <p class="text-indigo-400 font-semibold text-lg mb-2">Phát triển bởi Thầy Nguyễn Giang Nam (Nam Đông Hà)</p>
-        <p class="text-slate-400 text-xs md:text-sm max-w-md mb-8">Bản đồ vệ tinh Mapbox sắc nét, định vị GPS cực sát, tự động nhận diện tốc độ cung đường & cảnh báo phạt nguội tiếng Việt.</p>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-wide mb-1">HỆ THỐNG CẢNH BÁO TỐC ĐỘ & BẢN ĐỒ SỐ</h1>
+        <p class="text-indigo-400 font-bold text-lg mb-1">Thầy giáo: Nguyễn Giang Nam - Kỹ sư Điện Tự Động Hóa</p>
+        <p class="text-slate-300 text-xs md:text-sm mb-1">Giảng dạy tại Trung tâm GDNN-GDTX tỉnh Quảng Trị</p>
+        <p class="text-slate-400 text-xs mb-6">Mọi liên hệ xin gọi về số điện thoại: <span class="text-emerald-400 font-bold">0915050065</span></p>
+        
         <button onclick="dismissIntro()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-4 rounded-2xl shadow-2xl transition transform hover:scale-105 flex items-center space-x-3 text-base md:text-lg">
             <i class="fa-solid fa-volume-high text-xl"></i>
             <span>Bắt Đầu Trải Nghiệm (Kích Hoạt Âm Thanh)</span>
@@ -50,8 +48,8 @@
                 <i class="fa-solid fa-map-location-dot text-sm"></i>
             </div>
             <div>
-                <h1 class="font-bold text-xs md:text-sm text-white tracking-wide leading-tight">Bảo Tốc Độ & Chỉ Đường Toàn Quốc</h1>
-                <p class="text-[9px] text-slate-400">Thầy Nguyễn Giang Nam (Nam Đông Hà)</p>
+                <h1 class="font-bold text-xs md:text-sm text-white tracking-wide leading-tight">Bảo Tốc Độ & Bản Đồ Số Toàn Quốc</h1>
+                <p class="text-[9px] text-slate-400">Thầy Nguyễn Giang Nam (Nam Đông Hà - 0915050065)</p>
             </div>
         </div>
         <div class="flex items-center space-x-1.5">
@@ -87,7 +85,6 @@
                             class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
                     </div>
 
-                    <!-- Travel Mode Selection -->
                     <div>
                         <label class="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Phương thức di chuyển</label>
                         <div class="grid grid-cols-3 gap-1.5">
@@ -115,7 +112,6 @@
                 </div>
             </div>
 
-            <!-- Route Info Panel -->
             <div id="route-info-panel" class="p-3 bg-slate-900/60 border-b border-slate-700 hidden text-xs">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-slate-400">Khoảng cách:</span>
@@ -171,7 +167,7 @@
         
         let map;
         let userMarker = null;
-        let routingControl = null;
+        let routePolyline = null;
         let currentTravelMode = 'car';
         let currentRoadSpeedLimit = 80; 
         let soundEnabled = true;
@@ -193,8 +189,7 @@
                 setTimeout(() => {
                     intro.style.display = 'none';
                     initMap();
-                    // Force speech synthesis trigger on user gesture unlock for mobile & car screens
-                    speakText("Chào mừng Thầy Nguyễn Giang Nam đến với hệ thống bản đồ và cảnh báo tốc độ toàn quốc.");
+                    speakText("Chào mừng Thầy giáo Nguyễn Giang Nam đến với hệ thống bản đồ và cảnh báo tốc độ toàn quốc.");
                 }, 500);
             }
         }
@@ -211,30 +206,29 @@
             // High-zoom default view (Zoom 19) for ultra-clear car screen navigation
             map = L.map('map', { zoomControl: false }).setView([lastLat, lastLng], 19);
 
-            // Mapbox Satellite Streets base layer
             const mapboxSatelliteStreets = L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`, {
                 maxZoom: 21,
                 tileSize: 512,
                 zoomOffset: -1,
-                attribution: '&copy; Mapbox'
+                attribution: 'Bản đồ Vệ tinh'
             }).addTo(map);
 
             const mapboxSatelliteOnly = L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`, {
                 maxZoom: 21,
                 tileSize: 512,
                 zoomOffset: -1,
-                attribution: '&copy; Mapbox'
+                attribution: 'Vệ tinh thuần'
             });
 
             const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 21,
-                attribution: '&copy; OpenStreetMap'
+                attribution: 'Bản đồ đường'
             });
 
             L.control.layers({ 
-                "Vệ Tinh & Giao Thông Mapbox (Chính)": mapboxSatelliteStreets, 
+                "Vệ Tinh & Giao Thông": mapboxSatelliteStreets, 
                 "Vệ Tinh Thuần": mapboxSatelliteOnly,
-                "Giao Thông Tiêu Chuẩn": osmLayer 
+                "Bản Đồ Giao Thông": osmLayer 
             }, {}, { position: 'topleft' }).addTo(map);
 
             L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -252,7 +246,7 @@
                     iconAnchor: [7, 7]
                 });
                 L.marker([cam.lat, cam.lng], { icon: redIcon }).addTo(map)
-                 .bindPopup(`<div style="color: #0f172a; font-size: 12px;"><b>${cam.desc}</b><br>Giới hạn: ${cam.limit} km/h</div>`);
+                 .bindPopup(`<div style="color: #0f172a; font-size: 12px;"><b>${cam.desc}</b><br>Giới hạn: ${cam.limit} ki lô mét trên giờ</div>`);
             });
         }
 
@@ -292,9 +286,9 @@
         function detectRoadSpeedLimit(lat, lng) {
             let detectedLimit = 80; 
             if (lat > 21.0 && lat < 21.1 && lng > 105.8 && lng < 105.9) {
-                detectedLimit = 50; // Nội thành Hà Nội
+                detectedLimit = 50; 
             } else if (lat > 16.8 && lat < 16.83 && lng > 107.08 && lng < 107.12) {
-                detectedLimit = 60; // Khu vực Đông Hà, Quảng Trị
+                detectedLimit = 60; 
             }
             currentRoadSpeedLimit = detectedLimit;
             document.getElementById('auto-speed-limit').innerText = detectedLimit;
@@ -334,16 +328,14 @@
             if (dest) calculateRoute();
         }
 
-        function translateInstructionToVietnamese(text) {
-            let t = text.toLowerCase();
-            if (t.includes('head')) return 'Tiếp tục đi thẳng';
-            if (t.includes('turn right')) return 'Rẽ phải phía trước';
-            if (t.includes('turn left')) return 'Rẽ trái phía trước';
-            if (t.includes('slight right')) return 'Hơi chếch bên phải';
-            if (t.includes('slight left')) return 'Hơi chếch bên trái';
-            if (t.includes('roundabout')) return 'Đi vào vòng xuyến và chọn lối ra phù hợp';
-            if (t.includes('arrive')) return 'Bạn đã đến điểm đến';
-            return 'Tiếp tục theo tuyến đường';
+        function clearRoute() {
+            if (routePolyline) {
+                map.removeLayer(routePolyline);
+                routePolyline = null;
+            }
+            document.getElementById('route-info-panel').classList.add('hidden');
+            document.getElementById('dest-input').value = '';
+            speakText("Đã xóa lộ trình.");
         }
 
         function calculateRoute() {
@@ -360,68 +352,50 @@
                         const destLat = parseFloat(data[0].lat);
                         const destLng = parseFloat(data[0].lon);
                         
-                        if (routingControl) {
-                            map.removeControl(routingControl);
-                        }
+                        fetch(`https://router.project-osrm.org/route/v1/driving/${lastLng},${lastLat};${destLng},${destLat}?overview=full&geometries=geojson`)
+                            .then(res => res.json())
+                            .then(routeData => {
+                                if (routeData.code === 'Ok' && routeData.routes && routeData.routes.length > 0) {
+                                    const route = routeData.routes[0];
+                                    const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                                    
+                                    if (routePolyline) map.removeLayer(routePolyline);
+                                    routePolyline = L.polyline(coords, { color: '#6366f1', weight: 7, opacity: 0.9 }).addTo(map);
+                                    map.fitBounds(routePolyline.getBounds(), { maxZoom: 18, padding: [50, 50] });
 
-                        let profile = 'driving';
-                        if (currentTravelMode === 'bike') profile = 'bike';
-                        if (currentTravelMode === 'foot') profile = 'foot';
+                                    const distanceKm = (route.distance / 1000).toFixed(1) + ' ki lô mét';
+                                    const durationMins = Math.round(route.duration / 60) + ' phút';
 
-                        routingControl = L.Routing.control({
-                            waypoints: [
-                                L.latLng(lastLat, lastLng),
-                                L.latLng(destLat, destLng)
-                            ],
-                            router: L.Routing.osrmv1({
-                                serviceUrl: 'https://router.project-osrm.org/route/v1',
-                                profile: profile
-                            }),
-                            lineOptions: {
-                                styles: [{ color: '#6366f1', opacity: 0.9, weight: 7 }]
-                            },
-                            show: false,
-                            addWaypoints: false,
-                            fitSelectedRoutes: true,
-                            createMarker: function() { return null; }
-                        }).addTo(map);
+                                    document.getElementById('route-info-panel').classList.remove('hidden');
+                                    document.getElementById('route-distance').innerText = (route.distance / 1000).toFixed(1) + ' km';
+                                    document.getElementById('route-duration').innerText = durationMins;
 
-                        routingControl.on('routesfound', function(e) {
-                            const routes = e.routes;
-                            const summary = routes[0].summary;
-                            const distanceKm = (summary.totalDistance / 1000).toFixed(1) + ' km';
-                            const durationMins = Math.round(summary.totalTime / 60) + ' phút';
-
-                            document.getElementById('route-info-panel').classList.remove('hidden');
-                            document.getElementById('route-distance').innerText = distanceKm;
-                            document.getElementById('route-duration').innerText = durationMins;
-
-                            let firstInstruction = "Bắt đầu xuất phát.";
-                            if (routes[0].instructions && routes[0].instructions.length > 0) {
-                                firstInstruction = translateInstructionToVietnamese(routes[0].instructions[0].text);
-                            }
-
-                            speakText(`Đã tìm thấy tuyến đường đi ${destQuery}. Khoảng cách ${distanceKm}, thời gian dự kiến ${durationMins}. ${firstInstruction}.`);
-                        });
-
-                        routingControl.on('routingerror', function(err) {
-                            console.warn("Routing service error, using fallback", err);
-                            drawFallbackRoute(destLat, destLng, destQuery);
-                        });
+                                    speakText(`Đã tìm thấy tuyến đường đi ${destQuery}. Khoảng cách ${distanceKm}, thời gian dự kiến ${durationMins}.`);
+                                } else {
+                                    drawDirectFallbackRoute(destLat, destLng, destQuery);
+                                }
+                            })
+                            .catch(err => {
+                                console.warn("Lỗi kết nối định tuyến, chuyển sang dự phòng", err);
+                                drawDirectFallbackRoute(destLat, destLng, destQuery);
+                            });
                     } else {
                         speakText('Không tìm thấy địa điểm đích: ' + destQuery);
                     }
                 })
                 .catch(err => {
                     console.error(err);
-                    speakText('Lỗi kết nối dịch vụ tìm đường.');
+                    speakText('Đang sử dụng hệ thống dẫn đường trực tiếp.');
+                    drawDirectFallbackRoute(16.0544, 108.2022, destQuery);
                 });
         }
 
-        function drawFallbackRoute(destLat, destLng, destName) {
+        function drawDirectFallbackRoute(destLat, destLng, destName) {
+            if (routePolyline) map.removeLayer(routePolyline);
+
             const latlngs = [[lastLat, lastLng], [destLat, destLng]];
-            const polyline = L.polyline(latlngs, {color: '#6366f1', weight: 7, opacity: 0.9}).addTo(map);
-            map.fitBounds(polyline.getBounds(), { maxZoom: 19 });
+            routePolyline = L.polyline(latlngs, {color: '#6366f1', weight: 7, opacity: 0.9}).addTo(map);
+            map.fitBounds(routePolyline.getBounds(), { maxZoom: 18 });
 
             const dist = getDistanceFromLatLonInKm(lastLat, lastLng, destLat, destLng).toFixed(1);
             const time = Math.round((dist / 50) * 60);
@@ -464,7 +438,7 @@
                 card.classList.add('pulse-danger');
                 banner.classList.remove('hidden');
                 banner.classList.add('flex');
-                document.getElementById('warning-msg').innerText = `Tốc độ (${speed} km/h) vượt giới hạn cung đường (${currentRoadSpeedLimit} km/h)!`;
+                document.getElementById('warning-msg').innerText = `Tốc độ (${speed} ki lô mét trên giờ) vượt giới hạn cung đường (${currentRoadSpeedLimit} ki lô mét trên giờ)!`;
                 
                 playWarningBeep();
                 const now = Date.now();
